@@ -384,7 +384,7 @@ export default () => (
   - Represents complete page, with UI and logic.
   - At build time, Gatsby processes jsx in page component into html for browser.
 2. Layout components
-  - Represents the lok of the page
+  - Represents the look of the page
   - Re-used throughout the site
   - Wrapper that contains UI elements that are common to all pages (eg: header, footer)
 3. Regular components
@@ -416,7 +416,7 @@ import React from "react"
 import styles from "./layout.module.scss"
 
 export default ({ children }) => (
-  <div className="{styles.container">{chilren}</div>
+  <div className={styles.container}>{children}</div>
 )
 ```
 
