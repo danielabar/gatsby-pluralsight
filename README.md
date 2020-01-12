@@ -17,6 +17,10 @@
     - [Understading Components in Gatsby](#understading-components-in-gatsby)
     - [Creating Layout Components](#creating-layout-components)
     - [Creating Sub-components: Header](#creating-sub-components-header)
+    - [Creating a Header Link Component](#creating-a-header-link-component)
+    - [Creating Home and Social Button components](#creating-home-and-social-button-components)
+    - [Creating Sub-components: Footer](#creating-sub-components-footer)
+    - [Creating Sub-components: Title](#creating-sub-components-title)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -488,3 +492,297 @@ export default () => (
 
 ### Creating Sub-components: Header
 
+Start with styles and images (content copied over from course exercise materials):
+
+- `blog/src/components/header.module.scss`
+- `blog/src/components/header.js`
+- `blog/src/styles/global.scss`
+- `blog/src/images/github|linkedin|twitter.png`
+
+```jsx
+// blog/src/components/header.js
+import React from "react"
+import { Link } from "gatsby"
+import styles from "./header.module.scss"
+
+export default () => (
+  <header className={styles.container}>
+    <div className={styles.row}>
+      <Link to="/">My Gatsby blog</Link>
+    </div>
+
+    <div className={styles.row}>
+      <Link to="/">BLOG</Link>
+      <Link to="/about">ARTICLES</Link>
+    </div>
+  </header>
+)
+```
+
+Add header component to layout component:
+
+```jsx
+// blog/src/components/layout.js
+import React from "react"
+import styles from "./layout.module.scss"
+import Header from "./header.js"
+
+export default ({ children }) => (
+  <div className={styles.container}>
+    <Header />
+    {children}
+  </div>
+)
+```
+
+Now navigating to root `http://localhost:8000/` and another page `http://localhost:8000/about`, always see the header component because its part of the layout.
+
+### Creating a Header Link Component
+
+Define a `HeaaderLink` component *inside* the `Header` component -> not exported, private, cannot be seen or used outside of Header component.
+
+When using a component, any properties in markup become part of `props` object for component.
+
+```jsx
+// blog/src/components/header
+import React from "react"
+import { Link } from "gatsby"
+import styles from "./header.module.scss"
+
+// HeaderLink component
+const HeaderLink = props => (
+  <Link className={styles.link} to={props.to}>
+    {props.text}
+  </Link>
+)
+
+export default () => (
+  <header className={styles.container}>
+    <div className={styles.row}>
+      <Link to="/">My Gatsby blog</Link>
+    </div>
+
+    <div className={styles.row}>
+      <HeaderLink to="/" text="ARTICLES" />
+      <HeaderLink to="/about" text="ABOUT" />
+    </div>
+  </header>
+)
+```
+
+### Creating Home and Social Button components
+
+Replace main link to site with new `HomeButton` component.
+
+Add `SocialButton` component for links to various social media.
+
+```jsx
+// blog/src/components/header
+import React from "react"
+import { Link } from "gatsby"
+import styles from "./header.module.scss"
+
+// HeaderLink component
+const HeaderLink = props => (
+  <Link className={styles.link} to={props.to}>
+    {props.text}
+  </Link>
+)
+
+// HomeButton component
+const HomeButton = props => (
+  <Link to={props.to}>
+    <div className={styles.button}>{props.text}</div>
+  </Link>
+)
+
+// SocialButton component
+const SocialButton = props => {
+  let style = ""
+  let url = ""
+
+  if (props.site === "twitter") {
+    style = styles.buttonTwitter
+    url = "https://twitter.com/" + props.username
+  } else if (props.site === "linkedin") {
+    style = styles.buttonLinkedin
+    url = "https://www.linkedin.com/in/" + props.username
+  } else if (props.site === "github") {
+    style = styles.buttonGithub
+    url = "https://www.github.com/" + props.username
+  }
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      <div className={style}>{props.children}&nbsp;</div>
+    </a>
+  )
+}
+
+export default () => (
+  <header className={styles.container}>
+    <div className={styles.row}>
+      <HomeButton to="/" text="My Gatsby blog" />
+      <SocialButton site="github" username="evangeloper"></SocialButton>
+      <SocialButton site="linkedin" username="evangeloper"></SocialButton>
+      <SocialButton site="twitter" username="evangeloper"></SocialButton>
+    </div>
+
+    <div className={styles.row}>
+      <HeaderLink to="/" text="ARTICLES" />
+      <HeaderLink to="/about" text="ABOUT" />
+    </div>
+  </header>
+)
+```
+
+### Creating Sub-components: Footer
+
+Create new footer component, expects special property `children` that is part of `props` object
+
+```jsx
+// blog/src/components/footer.js
+import React from "react"
+import styles from "./footer.module.scss"
+
+export default ({ children }) => (
+  <footer className={styles.container}>
+    <div className={styles.footer}>{children}</div>
+  </footer>
+)
+```
+
+And corresponding styles for the footer component:
+
+```scss
+// blog/src/components/footer.module.scss
+@import "../styles/global";
+
+$footer-height: 100px;
+
+.container {
+  background-color: $color-pallete-3;
+  width: $container-width;
+  height: $footer-height;
+  position: absolute;
+  bottom: 0;
+  width: $container-width;
+
+  .footer {
+    margin: 0 auto;
+    max-width: $site-width;
+    height: $footer-height;
+    line-height: $footer-height;
+    color: $color-pallete-4;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    padding: 0px 20px 0px 20px;
+  }
+}
+```
+
+Incorporate footer component into the site layout, note that `{children}` in layout is now being wrapped in a div with `content` style. The text specified between the `<Footer>` tag becomes the `children` of Footer component:
+
+```jsx
+// blog/src/components/layout.js
+import React from "react"
+import styles from "./layout.module.scss"
+import Header from "./header.js"
+import Footer from "./footer.js"
+
+export default ({ children }) => (
+  <div className={styles.container}>
+    <Header />
+    <div className={styles.content}>{children}</div>
+    <Footer>My new Gatsby Blog 2019</Footer>
+  </div>
+)
+```
+
+### Creating Sub-components: Title
+
+Create new component for title that renders re-usable title based on `<h1>` tag and optional subtitle.
+
+```jsx
+// blog/src/components/title.js
+import React from "react"
+import styles from "./title.module.scss"
+
+export default props => (
+  <section className={styles.container}>
+    <h1 className={styles.title}>{props.text}</h1>
+    <div className={styles.subtitle}>{props.subtitle}</div>
+  </section>
+)
+```
+
+And corresponding styles:
+
+```scss
+// blog/src/components/title.module.scss
+@import "../styles/global";
+
+.container {
+  padding-bottom: 10px;
+  margin-bottom: 30px;
+  border-bottom: 5px solid $color-pallete-9;
+  text-align: center;
+  text-transform: uppercase;
+  color: $color-pallete-9;
+
+  .title {
+    font-size: 50px;
+    line-height: 60px;
+  }
+
+  .subtitle {
+    font-size: 18px;
+    font-weight: 100;
+  }
+}
+```
+
+Modify index and about pages to use title component rather than `<h1>` tag:
+
+```jsx
+// blog/src/pages/index.js
+import React from "react"
+import { Link } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+
+export default () => (
+  <Layout>
+    <Title text="Welcome" />
+    <nav>
+      <Link to="/">Home</Link> | <Link to="/about">About Me</Link>
+    </nav>
+    <p>
+      Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatem
+      voluptates earum et autem facilis aliquam? Architecto, quibusdam
+      dignissimos repellendus harum ipsum eius facilis, necessitatibus
+      aspernatur, recusandae non labore magnam tempora?
+    </p>
+  </Layout>
+)
+
+// blog/src/pages/about.js
+import React from "react"
+import { Link } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+
+export default () => (
+  <Layout>
+    <Title text="About Me" />
+    <nav>
+      <Link to="/">Home</Link> | <Link to="/about">About Me</Link>
+    </nav>
+    <p>
+      Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatem
+      voluptates earum et autem facilis aliquam? Architecto, quibusdam
+      dignissimos repellendus harum ipsum eius facilis, necessitatibus
+      aspernatur, recusandae non labore magnam tempora?
+    </p>
+  </Layout>
+)
+```
