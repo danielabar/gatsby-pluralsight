@@ -27,6 +27,12 @@
     - [Getting to Know GraphQL](#getting-to-know-graphql)
     - [Querying Site Metadata with Page Components](#querying-site-metadata-with-page-components)
     - [Querying Site Metadata from a Component](#querying-site-metadata-from-a-component)
+  - [Handling Data with Source and Transformer Plugins](#handling-data-with-source-and-transformer-plugins)
+    - [Getting Started with Gatsby Plugins](#getting-started-with-gatsby-plugins)
+    - [Introducting Gatsby Source Plugins](#introducting-gatsby-source-plugins)
+    - [Creating Markdown Files](#creating-markdown-files)
+    - [Gatsby Transformer Plugins](#gatsby-transformer-plugins)
+    - [Creating Article Components](#creating-article-components)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -973,3 +979,470 @@ export default () => (
 ```
 
 Now HomeButton on all pages is displaying the configured title.
+
+## Handling Data with Source and Transformer Plugins
+
+### Getting Started with Gatsby Plugins
+
+[Plugins site](https://www.gatsbyjs.org/plugins/)
+
+- extend core functionality
+- fetch content and data
+- transform data (eg: csv to json)
+- add third party services (eg: google analytics)
+- can also build your own plugin
+- packaged as npm modules
+- configured in `gatsby-config.js`
+
+### Introducting Gatsby Source Plugins
+
+Fetch data from their source (eg: CMS, local file system, db, api, etc.)
+
+`gatsby-source-filesystem` - read local files from file system, install it with: `npm i --save gatsby-source-filesystem`
+
+Configure:
+
+```javascript
+// blog/gatsby-config.js
+module.exports = {
+  siteMetadata: {
+    title: "Gatsby blog",
+  },
+  plugins: [
+    "gatsby-plugin-sass",
+    {
+      resolve: "gatsby-source-filesystem",
+      options: {
+        name: "files",
+        path: `${__dirname}/src/pages`,
+      },
+    },
+  ],
+}
+```
+
+Now browse to [GraphiQL](http://localhost:8000/___graphql)
+
+Good practice: Before using plugin in component, write the query in GraphiQL.
+
+This plugin introduces some new nodes that can be queried including `allFile`.
+
+Query to return file info for all files in pages folder (recall plugin is configured with base path pointing to src/pages):
+
+```graphql
+{
+  allFile {
+    edges {
+      node {
+        id
+        name
+        ext
+        size
+      }
+    }
+  }
+}
+```
+
+Result:
+
+```json
+{
+  "data": {
+    "allFile": {
+      "edges": [
+        {
+          "node": {
+            "id": "8342d730-feb1-5778-ab3e-203f4b16505c",
+            "name": "404",
+            "ext": ".js",
+            "size": 427
+          }
+        },
+        {
+          "node": {
+            "id": "3a6ae9b3-cda9-53fd-92e7-fb7ffd4eb25f",
+            "name": "404.module",
+            "ext": ".scss",
+            "size": 154
+          }
+        },
+        {
+          "node": {
+            "id": "66d8a2aa-faea-562e-acaf-7e9c467aab16",
+            "name": "about",
+            "ext": ".js",
+            "size": 594
+          }
+        },
+        {
+          "node": {
+            "id": "0d02b081-4989-5df2-991b-d5f77bc18f41",
+            "name": "index",
+            "ext": ".js",
+            "size": 593
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Creating Markdown Files
+
+- Markdown used to format text documents.
+- Easily converted to other formats, usually HTML.
+- Create some markdown files as data for the blog, one markdown file === one post.
+- Each markdown file with have some metadata and content
+- At build time, Gatsby will convert markdown files to static html pages
+
+Create new folder `src/markdown`.
+
+First section of file is *YAML Front Matter* - yet another markup language, metadata, add as many properties as you need in this section. Delimited by `---`
+
+```markdown
+<!-- blog/src/markdown/welcome.md -->
+---
+title: "Welcome to my new Gatsby blog!"
+date: "2019-01-01"
+image: "https://source.unsplash.com/150x150/?welcome"
+keywords: "developers"
+---
+
+#Hi there!
+
+**Est culpa fugiat** sint et mollit laboris dolore. Eiusmod qui adipisicing tempor ullamco irure non aliqua commodo proident laboris. Voluptate excepteur laborum anim exercitation Lorem exercitation eu irure voluptate. Et nulla pariatur reprehenderit ea exercitation ex consequat ad fugiat sunt eiusmod. Esse nostrud exercitation non tempor ad ipsum ea quis aute proident proident adipisicing amet. Nostrud esse non Lorem nostrud sunt mollit consectetur veniam quis duis ea anim sint.
+
+##Quis est nisi voluptate
+
+*Quis est nisi voluptate* non id magna voluptate laboris reprehenderit sunt. Sunt est nisi aliquip culpa eiusmod ad occaecat culpa mollit commodo proident eiusmod. Ullamco dolore enim commodo ad esse sit velit ad dolor mollit aute fugiat eu.
+
+##Aliqua et officia
+
+Aliqua et officia ad et dolore pariatur aute sunt ad consequat amet id. Pariatur dolor ex mollit aliquip nisi irure consectetur qui exercitation ut veniam esse. Labore duis aliquip dolore irure minim cupidatat. Veniam consequat elit esse do veniam ullamco id pariatur fugiat aliqua et deserunt. Tempor culpa eu ipsum exercitation proident. Id eiusmod amet labore duis minim veniam eiusmod cillum velit.
+
+###Proident aliqua
+
+Proident aliqua fugiat dolor ut officia officia voluptate elit laborum minim. Officia occaecat est duis amet officia sit eu. Excepteur cupidatat sit laborum mollit aliquip. Sint incididunt dolore incididunt et. Deserunt dolor enim nulla nisi.
+```
+
+Add a few more markdown files: `gatsby-awesome.md`, `react-powerful.md` and `graphql-many-datasources.md`
+
+Update filesystem plugin config to point to markdown dir:
+
+```javascript
+// blog/gatsby-config.js
+module.exports = {
+  siteMetadata: {
+    title: "Gatsby blog",
+  },
+  plugins: [
+    "gatsby-plugin-sass",
+    {
+      resolve: "gatsby-source-filesystem",
+      options: {
+        name: "files",
+        path: `${__dirname}/src/markdown`,
+      },
+    },
+  ],
+}
+```
+
+Run same file query as before to see new results from markdown dir:
+
+```graphql
+{
+  allFile {
+    edges {
+      node {
+        id
+        name
+        ext
+        size
+      }
+    }
+  }
+}
+```
+
+New results:
+
+```json
+{
+  "data": {
+    "allFile": {
+      "edges": [
+        {
+          "node": {
+            "id": "8b185766-f95e-51a4-97dc-368396923a6e",
+            "name": "gatsby-awesome",
+            "ext": ".md",
+            "size": 1202
+          }
+        },
+        {
+          "node": {
+            "id": "4b3d5e35-e144-5225-89d9-1717cef7dc74",
+            "name": "graphql-many-data-sources",
+            "ext": ".md",
+            "size": 1927
+          }
+        },
+        {
+          "node": {
+            "id": "bd221f5a-ae64-5807-9e46-29d3ef51064d",
+            "name": "react-powerful",
+            "ext": ".md",
+            "size": 1406
+          }
+        },
+        {
+          "node": {
+            "id": "57397a90-6da5-5318-b523-7604d2e22011",
+            "name": "welcome",
+            "ext": ".md",
+            "size": 1600
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Gatsby Transformer Plugins
+
+Transform data from one format to another, eg: markdown to json.
+
+Want to create a list of blog posts to be displayed on main page.
+
+`gatsby-transformer-remark` - parses markdown files using Remark, install it: `npm i --save gatsby-transformer-remark`, and configure it:
+
+```javascript
+// blog/gatsby-config.js
+module.exports = {
+  siteMetadata: {
+    title: "Gatsby blog",
+  },
+  plugins: [
+    "gatsby-plugin-sass",
+    {
+      resolve: "gatsby-source-filesystem",
+      options: {
+        name: "files",
+        path: `${__dirname}/src/markdown`,
+      },
+    },
+    "gatsby-transformer-remark",
+  ],
+}
+```
+
+Use GraphiQL to perform a query using nodes from file system source and transformer remark plugins to access markdown file information.
+
+Order by most recent date, transforming markdown data to json
+
+```graphql
+{
+  allMarkdownRemark(sort:{fields:[frontmatter___date], order:DESC}) {
+    totalCount
+    edges {
+      node {
+        id
+        frontmatter {
+          title
+          image
+          date(formatString:"MMMM YYYY")
+        }
+        excerpt
+      }
+    }
+  }
+}
+```
+
+Results:
+
+```json
+{
+  "data": {
+    "allMarkdownRemark": {
+      "totalCount": 4,
+      "edges": [
+        {
+          "node": {
+            "id": "128e4c5d-f95a-5053-bc50-5843bbe60882",
+            "frontmatter": {
+              "title": "One GraphQL, many data sources",
+              "image": "https://source.unsplash.com/150x150/?graphql",
+              "date": "January 2019"
+            },
+            "excerpt": "Learn to query multiple data sources with GraphQL Ipsum aliquip aute commodo aliqua qui ex enim anim esse excepteur ex. Veniam cillum et…"
+          }
+        },
+        {
+          "node": {
+            "id": "3747c7e6-1fd2-5891-9312-39a0ed60f6d8",
+            "frontmatter": {
+              "title": "React is powerful",
+              "image": "https://source.unsplash.com/150x150/?reactjs",
+              "date": "January 2019"
+            },
+            "excerpt": "Learn why React is so powerful Sint voluptate ex anim id ullamco duis quis. Ea excepteur sit ex quis eiusmod culpa nulla in non dolor magna…"
+          }
+        },
+        {
+          "node": {
+            "id": "f2e4c849-75cb-5977-bec1-03a0f583f61b",
+            "frontmatter": {
+              "title": "Gatsby is awesome",
+              "image": "https://source.unsplash.com/150x150/?gatsbyjs",
+              "date": "January 2019"
+            },
+            "excerpt": "If you are reading this, you know Gatsby is awesome! Dolore anim duis enim sint elit et dolor pariatur ipsum anim dolor et consequat velit…"
+          }
+        },
+        {
+          "node": {
+            "id": "791fbebf-33ab-57e9-a750-880bde6c8b2a",
+            "frontmatter": {
+              "title": "Welcome to my new Gatsby blog!",
+              "image": "https://source.unsplash.com/150x150/?welcome",
+              "date": "January 2019"
+            },
+            "excerpt": "Hi there! Est culpa fugiat sint et mollit laboris dolore. Eiusmod qui adipisicing tempor ullamco irure non aliqua commodo proident laboris…"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+Want to use this query on main page `index.js` to display most recent posts. Note that `<article>...</article>` will be rendered once per each markdown file returned by the query:
+
+```javascript
+import React from "react"
+import { Link } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+import { graphql } from "gatsby"
+
+export default ({ data }) => (
+  <Layout>
+    <Title text="Welcome" />
+    <nav>
+      <Link to="/">Home</Link> | <Link to="/about">About Me</Link>
+    </nav>
+    <p>
+      Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatem
+      voluptates earum et autem facilis aliquam? Architecto, quibusdam
+      dignissimos repellendus harum ipsum eius facilis, necessitatibus
+      aspernatur, recusandae non labore magnam tempora?
+    </p>
+    <div className="posts">
+      {data.allMarkdownRemark.edges.map(({ node }) => (
+        <article>
+          <div>
+            <strong>{node.frontmatter.title}</strong>
+          </div>
+          <div>{node.excerpt}</div>
+        </article>
+      ))}
+    </div>
+  </Layout>
+)
+
+export const query = graphql`
+  {
+    allMarkdownRemark(sort: { fields: [frontmatter___date], order: DESC }) {
+      totalCount
+      edges {
+        node {
+          id
+          frontmatter {
+            title
+            image
+            date(formatString: "MMMM YYYY")
+          }
+          excerpt
+        }
+      }
+    }
+  }
+`
+```
+
+### Creating Article Components
+
+An improvement would be to encapsulate all logic in the `<article>` tag into an `Article` component.
+
+The entire component is clickable (wrapped in Link), url is whatever is defined in `props.to`:
+
+```jsx
+// blog/src/components/article.js
+import React from "react"
+import { Link } from "gatsby"
+import styles from "./article.module.scss"
+
+export default props => (
+  <Link to={props.to}>
+    <article className={styles.articleBox} key={props.id}>
+      <div className={styles.left}>
+        <img
+          src={"https://source.unsplash.com/150x150/?" + props.keywords}
+          alt={props.title}
+        />
+      </div>
+      <div className={styles.right}>
+        <h3>{props.title}</h3>
+        <div className={styles.date}>{props.date}</div>
+        <div>{props.excerpt}</div>
+      </div>
+    </article>
+  </Link>
+)
+```
+
+Use article component in index page:
+
+```jsx
+import React from "react"
+import { Link } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+import { graphql } from "gatsby"
+import Article from "../components/article"
+
+export default ({ data }) => (
+  <Layout>
+    ...
+    <div className="posts">
+      {data.allMarkdownRemark.edges.map(({ node }) => (
+        <Article
+          id={node.id}
+          to="/"
+          keywords={node.frontmatter.keywords}
+          title={node.frontmatter.title}
+          date={node.frontmatter.date}
+          excerpt={node.excerpt}
+        />
+      ))}
+    </div>
+  </Layout>
+)
+
+export const query = graphql`
+  {
+    allMarkdownRemark(sort: { fields: [frontmatter___date], order: DESC }) {
+      ...
+    }
+  }
+`
+```
+
+Further improvement - it's messy for index page to query for markdown, then pass this data to article component.
+
+Create new component `ArticleList` to encapsulate data fetching, and looping over it to render each `Article` component.
