@@ -1446,3 +1446,71 @@ export const query = graphql`
 Further improvement - it's messy for index page to query for markdown, then pass this data to article component.
 
 Create new component `ArticleList` to encapsulate data fetching, and looping over it to render each `Article` component.
+
+```jsx
+// blog/src/components/article-list.js
+import React from "react"
+import { StaticQuery, graphql } from "gatsby"
+import Article from "../components/article"
+
+export default () => (
+  <StaticQuery
+    query={graphql`
+      {
+        allMarkdownRemark(sort: { fields: [frontmatter___date], order: DESC }) {
+          totalCount
+          edges {
+            node {
+              id
+              frontmatter {
+                title
+                image
+                keywords
+                date(formatString: "MMMM YYYY")
+              }
+              excerpt
+            }
+          }
+        }
+      }
+    `}
+    render={data => (
+      <div className="posts">
+        {data.allMarkdownRemark.edges.map(({ node }) => (
+          <Article
+            id={node.id}
+            to="/"
+            keywords={node.frontmatter.keywords}
+            title={node.frontmatter.title}
+            date={node.frontmatter.date}
+            excerpt={node.excerpt}
+          />
+        ))}
+      </div>
+    )}
+  />
+)
+```
+
+Then simplify main page to use it:
+
+```jsx
+// blog/src/pages/index.js
+import React from "react"
+import Layout from "../components/layout"
+import Title from "../components/title"
+import ArticleList from "../components/article-list"
+
+export default () => (
+  <Layout>
+    <Title text="Welcome" />
+    <p>
+      Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatem
+      voluptates earum et autem facilis aliquam? Architecto, quibusdam
+      dignissimos repellendus harum ipsum eius facilis, necessitatibus
+      aspernatur, recusandae non labore magnam tempora?
+    </p>
+    <ArticleList />
+  </Layout>
+)
+```
