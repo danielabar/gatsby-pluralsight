@@ -21,6 +21,12 @@
     - [Creating Home and Social Button components](#creating-home-and-social-button-components)
     - [Creating Sub-components: Footer](#creating-sub-components-footer)
     - [Creating Sub-components: Title](#creating-sub-components-title)
+  - [Querying Data with GraphQL](#querying-data-with-graphql)
+    - [Intro](#intro)
+    - [Adding Site Metadata](#adding-site-metadata)
+    - [Getting to Know GraphQL](#getting-to-know-graphql)
+    - [Querying Site Metadata with Page Components](#querying-site-metadata-with-page-components)
+    - [Querying Site Metadata from a Component](#querying-site-metadata-from-a-component)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -786,3 +792,184 @@ export default () => (
   </Layout>
 )
 ```
+
+## Querying Data with GraphQL
+
+### Intro
+
+- Data: first class citizen in Gatsby
+- GraphQL: Fetch data declaratively from a datasource, specifying what data is needed and format, works very well with React
+- Can fetch from variety of datasources including, databases, file system, headless CMS etc.
+- Implemented via plugins
+- Gatsby uses GraphQL to fetch data at *build time* (built-in behaviour, don't need to write any graphql server yourself)
+- Data used to create static resources such as HTML pages
+- Also an option - use Gatsby to fetch data at *run time* (use when creating an application)
+
+**Markdown file format**
+
+Gatsby supports reading markdown files as a GraphQL datasource, this will be focus of course because we're building a blog, eg:
+
+```markdown
+---
+title: "Gatsby is awesome"
+date: "2019-01-02
+image: "https://tld.com/gatsbyjs.jpg"
+keywords: "blog"
+
+# If you are reading this, you know Gatsby is awesome!
+
+Dolore anim duis enim sint elit et dolor pariatur ipsum.
+---
+```
+
+**Types of Queries**
+
+1. Page Queries
+  - runs inside page component (eg: index.js, about.js)
+2. Static Queries
+  - runs insode non page components (eg: header.js, title.js)
+
+### Adding Site Metadata
+
+Site metadata stored as js object in [gatsby-config.js](blog/gatsby-config.js):
+
+```javascript
+// blog/gatsby-config.js
+module.exports = {
+  siteMetadata: {
+    title: "Gatsby blog",
+  },
+  plugins: ["gatsby-plugin-sass"],
+}
+```
+
+The `title` in `siteMetadata` should be displayed on every page. Benefit is if this changes, will be automatically reflected in every page on the site.
+
+### Getting to Know GraphQL
+
+Gatsby comes bundled with `GraphiQL` - in browser IDE to explore GraphQL datasources.
+
+After running `gatsby develop`, console shows:
+
+```
+View GraphiQL, an in-browser IDE, to explore your site's data and schema
+⠀
+  http://localhost:8000/___graphql
+```
+
+Navigating to this URL - left panel can write GraphQL queries and right panel shows results.
+
+Query to get title property from site metadata:
+
+```graphql
+{
+  site {
+    siteMetadata {
+      title
+    }
+  }
+}
+```
+
+Result returned in same format as what was requested, note root `data`, this will be inserted into React `props` object and is how components get access to results from graphql queries:
+
+```json
+{
+  "data": {
+    "site": {
+      "siteMetadata": {
+        "title": "Gatsby blog"
+      }
+    }
+  }
+}
+```
+
+### Querying Site Metadata with Page Components
+
+Results from previous query, in js object form would be: `data.site.siteMetadata.title`.
+
+To make use of title via GraphQL query in page component, add query, which exposes results in `data` property of `props`, then use it:
+
+```javascript
+// blog/src/pages/index.js
+import React from "react"
+import { Link } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+import { graphql } from "gatsby"
+
+export default ({ data }) => (
+  <Layout>
+    <Title text={data.site.siteMetadata.title} />
+    <nav>
+      <Link to="/">Home</Link> | <Link to="/about">About Me</Link>
+    </nav>
+    <p>
+      Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatem
+      voluptates earum et autem facilis aliquam? Architecto, quibusdam
+      dignissimos repellendus harum ipsum eius facilis, necessitatibus
+      aspernatur, recusandae non labore magnam tempora?
+    </p>
+  </Layout>
+)
+
+export const query = graphql`
+  {
+    site {
+      siteMetadata {
+        title
+      }
+    }
+  }
+`
+```
+
+### Querying Site Metadata from a Component
+
+Refactor to use title from Header component rather than index Page - need static query component, which accepts two properties: `query` and `render`:
+
+```jsx
+import React from "react"
+import { Link } from "gatsby"
+import styles from "./header.module.scss"
+import { StaticQuery, graphql } from "gatsby"
+
+// HeaderLink component
+...
+// HomeButton component
+...
+// SocialButton component
+...
+
+export default () => (
+  <StaticQuery
+    query={graphql`
+      {
+        site {
+          siteMetadata {
+            title
+          }
+        }
+      }
+    `}
+    render={data => (
+      <header className={styles.container}>
+        <div className={styles.row}>
+          <HomeButton to="/" text={data.site.siteMetadata.title} />
+          <SocialButton site="github" username="evangeloper"></SocialButton>
+          <SocialButton site="linkedin" username="evangeloper"></SocialButton>
+          <SocialButton site="twitter" username="evangeloper"></SocialButton>
+        </div>
+
+        <div className={styles.row}>
+          <HeaderLink to="/" text="ARTICLES" />
+          <HeaderLink to="/about" text="ABOUT" />
+        </div>
+      </header>
+    )}
+  />
+)
+```
+
+Now HomeButton on all pages is displaying the configured title.
