@@ -33,6 +33,13 @@
     - [Creating Markdown Files](#creating-markdown-files)
     - [Gatsby Transformer Plugins](#gatsby-transformer-plugins)
     - [Creating Article Components](#creating-article-components)
+  - [Creating Dynamic Pages Programmatically](#creating-dynamic-pages-programmatically)
+    - [Dynamic Page Creation in Gatsby](#dynamic-page-creation-in-gatsby)
+    - [Introducing the Gatsby API](#introducing-the-gatsby-api)
+    - [Creating Friendly URLs](#creating-friendly-urls)
+    - [Creating Page Templates](#creating-page-templates)
+    - [Creating Pages Programmatically](#creating-pages-programmatically)
+    - [Debug](#debug)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -1514,3 +1521,531 @@ export default () => (
   </Layout>
 )
 ```
+
+## Creating Dynamic Pages Programmatically
+
+### Dynamic Page Creation in Gatsby
+
+- Gatsby is fundamentally a static site generator
+- So far have been creating pages via react components in `/src/pages` -> rendered as static HTML, Gatsby uses Webpack for this
+- But for blog, would not be practical to hand code each markdown article into a react component in src/pages
+- Gatsby has solution for generating *dynamic* pages at build time, converting a data source such as markdown files, into static HTML
+
+### Introducing the Gatsby API
+
+Will be using `onCreateNode` event and `createNodeField` API function
+
+**onCreateNode**
+
+- fired when a new node is created
+- node === data object
+- all *data* in Gatsby represented using the *node data structure*
+- all nodes have `id` and `type` properties, also have `children` nodes, other properties depend on node type (eg: markdown node will have different properties than image node)
+```javascript
+if (node.internal.type === 'MarkdownRemark') {
+  // Do cool stuff
+}
+```
+
+**createNodeField**
+
+- function to create additional fields on existing nodes created by other plugins
+- eg: create friendly url's for each markdown file
+
+### Creating Friendly URLs
+
+Hook into Gatsby's build pipeline, intercept each markdown file, use file metadata to construct a friendly url.
+
+Will make use of another Gatsby config file: `gatsby-node.js`. Used to write code to hook into Gatsby's build pipeline.
+
+Simple example, `onCreateNode` is called once for every node that is created or updated. This code runs at build time, enter `gatsby develop` in console to kick it off:
+
+```javascript
+// blog/gatsby-node.js
+exports.onCreateNode = ({ node }) => {
+  console.log(`*** I am processing a node with type: ${node.internal.type}`)
+}
+```
+
+```shell
+$ gatsby develop
+*** I am processing a node with type: SitePage
+*** I am processing a node with type: SitePlugin
+*** I am processing a node with type: SitePlugin
+...
+** I am processing a node with type: Site
+*** I am processing a node with type: Directory
+*** I am processing a node with type: MarkdownRemark
+*** I am processing a node with type: File
+*** I am processing a node with type: MarkdownRemark
+...
+*** I am processing a node with type: SitePage
+*** I am processing a node with type: SitePage
+```
+
+Only interested in nodes of type `MarkdownRemark`:
+
+```javascript
+// blog/gatsby-node.js
+exports.onCreateNode = ({ node }) => {
+  if (node.internal.type === "MarkdownRemark") {
+    console.log(`*** I am processing a node with type: ${node.internal.type}`)
+  }
+}
+```
+
+Want to use the markdown file name to create a friendly url:
+
+| File name | URL |
+| --------- | --- |
+| react-powerful.md | localhost/react-powerful |
+| welcome.md | localhost/welcome |
+| graphql-many-data-sources.md | localhost/graphql-many-data-sources |
+| gatsby-awesome.md | localhost/gatsby-awesome |
+
+Use the Gatsby source plugin (already in use) to create slugs, note use of CommonJS syntax in `gatsby-node.js`:
+
+```javascript
+// blog/gatsby-node.js
+const { createFilePath } = require("gatsby-source-filesystem")
+
+exports.onCreateNode = ({ node, getNode }) => {
+  if (node.internal.type === "MarkdownRemark") {
+    // getNode function used to get node's parent, which contains actual file name used to create slug
+    const slug = createFilePath({ node, getNode, basePath: "markdown" })
+    console.log(slug)
+  }
+}
+```
+
+Again running `gatsby develop`:
+
+```shell
+/gatsby-awesome/
+/graphql-many-data-sources/
+/react-powerful/
+/welcome/
+```
+
+Use content of `slug` variable to create a new node field in the markdown remark node. Use `createNodeField` function to do this, comes from `actions` object that is passed in to `onCreatenode`.
+
+```javascript
+const { createFilePath } = require("gatsby-source-filesystem")
+
+exports.onCreateNode = ({ node, getNode, actions }) => {
+  if (node.internal.type === "MarkdownRemark") {
+    // Restructuring assignment (ES6)
+    const { createNodeField } = actions
+    // getNode function used to get node's parent, which contains actual file name used to create slug
+    const slug = createFilePath({ node, getNode, basePath: "markdown" })
+    createNodeField({
+      node,
+      name: "slug",
+      value: slug,
+    })
+    console.log(`${node.fields.slug}`)
+  }
+}
+```
+
+Run `gatsby develop`:
+
+```shell
+/gatsby-awesome/
+/graphql-many-data-sources/
+/react-powerful/
+/welcome/
+```
+
+Verify slug is available in GraphiQL
+
+```graphql
+{
+  allMarkdownRemark(sort:{fields:[frontmatter___date], order:DESC}) {
+    totalCount
+    edges {
+      node {
+        id
+        frontmatter {
+          title
+          image
+          date(formatString:"MMMM YYYY")
+        }
+        fields {
+          slug
+        }
+        excerpt
+      }
+    }
+  }
+}
+```
+
+Results:
+
+```json
+{
+  "data": {
+    "allMarkdownRemark": {
+      "totalCount": 4,
+      "edges": [
+        {
+          "node": {
+            "id": "128e4c5d-f95a-5053-bc50-5843bbe60882",
+            "frontmatter": {
+              "title": "One GraphQL, many data sources",
+              "image": "https://source.unsplash.com/150x150/?graphql",
+              "keywords": "data",
+              "date": "January 2019"
+            },
+            "fields": {
+              "slug": "/graphql-many-data-sources/"
+            },
+            "excerpt": "Learn to query multiple data sources with GraphQL Ipsum aliquip aute commodo aliqua qui ex enim anim esse excepteur ex. Veniam cillum et…"
+          }
+        },
+        {
+          "node": {
+            "id": "3747c7e6-1fd2-5891-9312-39a0ed60f6d8",
+            "frontmatter": {
+              "title": "React is powerful",
+              "image": "https://source.unsplash.com/150x150/?reactjs",
+              "keywords": "javascript",
+              "date": "January 2019"
+            },
+            "fields": {
+              "slug": "/react-powerful/"
+            },
+            "excerpt": "Learn why React is so powerful Sint voluptate ex anim id ullamco duis quis. Ea excepteur sit ex quis eiusmod culpa nulla in non dolor magna…"
+          }
+        },
+        {
+          "node": {
+            "id": "f2e4c849-75cb-5977-bec1-03a0f583f61b",
+            "frontmatter": {
+              "title": "Gatsby is awesome",
+              "image": "https://source.unsplash.com/150x150/?gatsbyjs",
+              "keywords": "blog",
+              "date": "January 2019"
+            },
+            "fields": {
+              "slug": "/gatsby-awesome/"
+            },
+            "excerpt": "If you are reading this, you know Gatsby is awesome! Dolore anim duis enim sint elit et dolor pariatur ipsum anim dolor et consequat velit…"
+          }
+        },
+        {
+          "node": {
+            "id": "791fbebf-33ab-57e9-a750-880bde6c8b2a",
+            "frontmatter": {
+              "title": "Welcome to my new Gatsby blog!",
+              "image": "https://source.unsplash.com/150x150/?welcome",
+              "keywords": "developers",
+              "date": "January 2019"
+            },
+            "fields": {
+              "slug": "/welcome/"
+            },
+            "excerpt": "Hi there! Est culpa fugiat sint et mollit laboris dolore. Eiusmod qui adipisicing tempor ullamco irure non aliqua commodo proident laboris…"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Creating Page Templates
+
+- template will define look & feel of page
+- re-used for pages we plan to create dynamically
+- live in `src/templates`, can also have css modules in here
+- template is also a react component
+
+Note use of CSS-in-JS for dev due to use of dynamic content (post keywords) for generating background image. Syntax is similar to inline styles, except double braces `{{...}}` used to open and close styles. Also use camelCase instead of kebab-case for css property names, and separate with commas.
+
+Note use of `dangerouslySetInnerHTML` to pass in html syntax into a React element. In this case it's our markdown content, otherwise, *always* sanitize untrusted data.
+
+```javascript
+// blog/src/templates/post.js
+import React from "react"
+import { graphql } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+import styles from "./post.module.scss"
+
+// data object contains results from graphql query in this page
+export default ({ data }) => {
+  const post = data.markdownRemark
+
+  return (
+    <Layout>
+      <div className={styles.container}>
+        <Title text={post.frontmatter.title}></Title>
+        <div
+          style={{
+            width: "100%",
+            height: "200px",
+            backgroundColor: "#fafafa",
+            backgroundImage:
+              "Url(https://source.unsplash.com/960x200/?" +
+              post.frontmatter.keywords +
+              ")",
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
+            marginBottom: "30px",
+          }}
+        ></div>
+        <div
+          className={styles.content}
+          dangerouslySetInnerHTML={{ __html: post.html }}
+        />
+      </div>
+    </Layout>
+  )
+}
+
+// query will filter by slug using parameter $slug
+// eg: slug === 'gatsby-awesome'
+// eg: slug === 'react-powerful'
+export const query = graphql`
+  query($slug: String!) {
+    markdownRemark(fields: { slug: { eq: $slug } }) {
+      html
+      frontmatter {
+        title
+        keywords
+      }
+    }
+  }
+`
+```
+
+### Creating Pages Programmatically
+
+Immplement in `gatsby-node.js`.
+
+`createPages` function returns a *Promise* - object that represents the result of an asynchronous operation, once the operation either completes or fails. The actual work of building the page happens in success block of promise.
+
+Use `path` module to work with file/folder paths.
+
+```javascript
+// blog/gatsby-node.js
+const { createFilePath } = require("gatsby-source-filesystem")
+const path = require("path")
+
+exports.onCreateNode = ({ node, getNode, actions }) => {
+  if (node.internal.type === "MarkdownRemark") {
+    // Restructuring assignment (ES6)
+    const { createNodeField } = actions
+    // getNode function used to get node's parent, which contains actual file name used to create slug
+    const slug = createFilePath({ node, getNode, basePath: "markdown" })
+    createNodeField({
+      node,
+      name: "slug",
+      value: slug,
+    })
+  }
+}
+
+// Create post pages programmatically
+exports.createPages = ({ graphql, actions }) => {
+  const { createPage } = actions
+
+  return new Promise(resolve => {
+    graphql(`
+      {
+        allMarkdownRemark {
+          edges {
+            node {
+              fields {
+                slug
+              }
+            }
+          }
+        }
+      }
+    `).then(result => {
+      result.data.allMarkdownRemark.edges.forEach(({ node }) => {
+        // context passed as props to the component this.props.pageContext as well as to the graphql query as graphql arguments.
+        createPage({
+          path: node.fields.slug,
+          component: path.resolve("./src/templates/post.js"),
+          context: {
+            slug: node.fields.slug,
+          },
+        })
+      })
+      resolve()
+    })
+  })
+}
+```
+
+Instructor's solution requires two queries, one in `gatsby-node.js` that only fetches `slug` from markdown files, and a second query in page template, that will get run once for each markdown file to fetch all the other data needed to render page (title, keywords, content).
+
+Alternative solution to avoid "n + 1" queries, is to grab all the markdown data needed just once in `gatsby-node.js` query, and pass it to page template via `context` property, which then becomes available to page component via `props.pageContext`:
+
+```javascript
+// blog/gatsby-node.js
+const { createFilePath } = require("gatsby-source-filesystem")
+const path = require("path")
+
+exports.onCreateNode = ({ node, getNode, actions }) => {
+  if (node.internal.type === "MarkdownRemark") {
+    // Restructuring assignment (ES6)
+    const { createNodeField } = actions
+    // getNode function used to get node's parent, which contains actual file name used to create slug
+    const slug = createFilePath({ node, getNode, basePath: "markdown" })
+    createNodeField({
+      node,
+      name: "slug",
+      value: slug,
+    })
+  }
+}
+
+// Create post pages programmatically
+exports.createPages = ({ graphql, actions }) => {
+  const { createPage } = actions
+
+  // This query grabs all the markdown content and passes it to the
+  // page template via `context`.
+  return new Promise(resolve => {
+    graphql(`
+      {
+        allMarkdownRemark {
+          edges {
+            node {
+              frontmatter {
+                title
+                image
+                keywords
+              }
+              fields {
+                slug
+              }
+              html
+            }
+          }
+        }
+      }
+    `).then(result => {
+      result.data.allMarkdownRemark.edges.forEach(({ node }) => {
+        createPage({
+          path: node.fields.slug,
+          component: path.resolve("./src/templates/post.js"),
+          context: {
+            slug: node.fields.slug,
+            content: node.html,
+            keywords: node.frontmatter.keywords,
+            title: node.frontmatter.title,
+          },
+        })
+      })
+      resolve()
+    })
+  })
+}
+```
+
+```jsx
+// blog/src/templates/post.js
+import React from "react"
+import { graphql } from "gatsby"
+import Layout from "../components/layout"
+import Title from "../components/title"
+import styles from "./post.module.scss"
+
+export default props => {
+  const content = props.pageContext.content
+  const keywords = props.pageContext.keywords
+  const title = props.pageContext.title
+
+  return (
+    <Layout>
+      <div className={styles.container}>
+        <Title text={title}></Title>
+        <div
+          style={{
+            width: "100%",
+            height: "200px",
+            backgroundColor: "#fafafa",
+            backgroundImage:
+              "Url(https://source.unsplash.com/960x200/?" + keywords + ")",
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
+            marginBottom: "30px",
+          }}
+        ></div>
+        <div
+          className={styles.content}
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      </div>
+    </Layout>
+  )
+}
+```
+
+Verify pages are rendered by visiting friendly url [http://localhost:8000/welcome](http://localhost:8000/welcome)
+
+But we still need to hook up main page - where user can click any blog post excerpt, to navigate to the generated page.
+
+`ArticleList` component, currently has hard-coded `to='/'`.
+
+Modify static query to fetch additional data (i.e. slug from fields) needed to build correct url to the post.
+
+Then moidfy `to` property passed to `Article` component to specify `{node.fields.slug}`:
+
+```jsx
+// blog/src/components/article-list.js
+import React from "react"
+import { StaticQuery, graphql } from "gatsby"
+import Article from "../components/article"
+
+export default () => (
+  <StaticQuery
+    query={graphql`
+      {
+        allMarkdownRemark(sort: { fields: [frontmatter___date], order: DESC }) {
+          totalCount
+          edges {
+            node {
+              fields {
+                slug
+              }
+              id
+              frontmatter {
+                title
+                image
+                keywords
+                date(formatString: "MMMM YYYY")
+              }
+              excerpt
+            }
+          }
+        }
+      }
+    `}
+    render={data => (
+      <div className="posts">
+        {data.allMarkdownRemark.edges.map(({ node }) => (
+          <Article
+            id={node.id}
+            to={node.fields.slug}
+            keywords={node.frontmatter.keywords}
+            title={node.frontmatter.title}
+            date={node.frontmatter.date}
+            excerpt={node.excerpt}
+          />
+        ))}
+      </div>
+    )}
+  />
+)
+```
+
+### Debug
+
+Follow [these instructions](https://github.com/microsoft/vscode-recipes/tree/master/Gatsby-js) to debug gatsby node build process.
