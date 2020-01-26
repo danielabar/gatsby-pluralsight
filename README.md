@@ -40,6 +40,9 @@
     - [Creating Page Templates](#creating-page-templates)
     - [Creating Pages Programmatically](#creating-pages-programmatically)
     - [Debug](#debug)
+  - [Deploying a Gatsby Site](#deploying-a-gatsby-site)
+    - [Creating a Production Build](#creating-a-production-build)
+    - [Deploying Your Site](#deploying-your-site)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -2049,3 +2052,33 @@ export default () => (
 ### Debug
 
 Follow [these instructions](https://github.com/microsoft/vscode-recipes/tree/master/Gatsby-js) to debug gatsby node build process.
+
+## Deploying a Gatsby Site
+
+### Creating a Production Build
+
+`gatsby develop` - Starts Gatsby's internal development server
+
+`gatsby build` - Creates a production-ready build
+
+`gatsby serve` - Serves the production ready version of the site
+
+Build generates full static site in `public` dir.
+
+Use `serve` to test that production build looks ok locally before deploying, hosts on [http://localhost:9000/](http://localhost:9000/)
+
+### Deploying Your Site
+
+Static site hosting advantages:
+
+- No server setup or database to deploy
+- Speed, no additional trip to db to fetch content, or dynamic rendering needed, can be hosted on a CDN
+- Cheap to host
+
+For this course, will use free hosting [Surge](https://surge.sh/). Install it, then use CLI to create free account and deploy our blog.
+
+```shell
+$ npm install --global surge
+$ cd public
+$ surge # follow instructions to create account and deploy site
+```
